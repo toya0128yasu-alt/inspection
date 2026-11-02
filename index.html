@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>客室インスペクション項目</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="インスペクション">
+<meta name="theme-color" content="#1F4E78">
+<style>
+:root{--navy:#1F4E78;--bg:#F4F6F9;--card:#fff;--line:#D9DEE5;--sub:#6B7280;--red:#C0392B}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:#1F2937;font-family:-apple-system,"Hiragino Sans","Meiryo UI","Noto Sans JP",sans-serif;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+header{position:sticky;top:0;z-index:10;background:var(--navy);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 12px 0}
+.hrow{display:flex;align-items:center;gap:8px;padding-bottom:6px}
+.hrow h1{font-size:16px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{background:rgba(255,255,255,.15);border:0;color:#fff;border-radius:8px;padding:8px 12px;font-size:15px}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 -12px;padding:0 12px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:0;background:transparent;color:#C9D6E6;padding:10px 12px;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+.tab.on{color:#fff;border-bottom-color:#FFD15C;font-weight:700}
+.tab small{opacity:.8;margin-left:3px}
+main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
+.sec{font-size:13px;font-weight:700;color:var(--navy);margin:16px 4px 6px;display:flex;align-items:center;gap:6px}
+.sec:before{content:"";width:4px;height:14px;background:var(--navy);border-radius:2px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;display:flex;gap:10px}
+.num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+.body{flex:1;min-width:0}
+.txt{font-size:15px;font-weight:600;line-height:1.45;word-break:break-word}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;font-size:12px}
+.chip{background:#E8EEF6;color:var(--navy);border-radius:99px;padding:2px 8px}
+.chip.set{background:#FFF3D1;color:#8A5A00;font-weight:700}
+.note{font-size:13px;color:var(--sub);margin-top:4px;white-space:pre-wrap}
+.thumbs{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.thumbs img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.ops{flex:none;display:flex;flex-direction:column;gap:4px}
+.ops button{border:1px solid var(--line);background:#fff;border-radius:8px;width:38px;height:32px;font-size:14px}
+.ops button:disabled{opacity:.3}
+.empty{text-align:center;color:var(--sub);padding:60px 20px;line-height:1.8}
+.fab{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 18px);background:var(--navy);color:#fff;border:0;border-radius:99px;padding:14px 22px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.ov.show{display:flex}
+.sheet{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px)}
+@media(min-width:700px){.ov{align-items:center}.sheet{border-radius:16px}}
+.sheet h2{font-size:17px;margin:0 0 12px}
+label.l{display:block;font-size:12px;font-weight:700;color:var(--sub);margin:12px 0 4px}
+.in{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px;background:#fff}
+textarea.in{min-height:70px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 14px;font-size:14px}
+.chips button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:20px}
+.stepper .in{width:80px;text-align:center}
+.stepper .unit{width:90px}
+.ph{display:flex;flex-wrap:wrap;gap:8px}
+.ph .p{position:relative}
+.ph img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.ph .busy{width:90px;height:90px;border-radius:8px;border:1px dashed #9AA8B8;background:#EEF2F7;color:#5B6B7F;font-size:12px;display:flex;align-items:center;justify-content:center;animation:pl 1s ease-in-out infinite alternate}
+@keyframes pl{from{opacity:.5}to{opacity:1}}
+.btn:disabled{opacity:.6}
+.ph .x{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--red);color:#fff;font-size:13px;line-height:24px;padding:0}
+.phbtns{display:flex;gap:8px;margin-top:8px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 14px;font-size:15px}
+.btn.pri{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700}
+.btn.dan{color:var(--red);border-color:#F1C4BF}
+.foot{display:flex;gap:8px;margin-top:18px}
+.foot .grow{flex:1}
+.menu button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:#fff;padding:14px 4px;font-size:15px}
+.menu .cap{font-size:12px;color:var(--sub);margin:14px 4px 2px;font-weight:700}
+.trow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.trow .in{flex:1}
+.trow button{flex:none;border:1px solid var(--line);background:#fff;border-radius:8px;width:38px;height:42px}
+.hint{font-size:12px;color:var(--sub);line-height:1.6}
+#viewer{position:fixed;inset:0;background:#000;z-index:80;display:none;align-items:center;justify-content:center}
+#viewer.show{display:flex}
+#viewer img{max-width:100%;max-height:100%}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:.3s;z-index:90;pointer-events:none}
+#toast.show{opacity:1}
+#print{display:none}
+@media print{
+  header,main,.fab,.ov,#toast,#viewer{display:none!important}
+  #print{display:block}
+  body{background:#fff}
+}
+.pt h2{font-size:18px;border-bottom:3px solid #1F4E78;padding-bottom:4px;margin:0 0 10px;color:#1F4E78}
+.pt .typ{page-break-after:always}
+.pt .typ:last-child{page-break-after:auto}
+.pi{display:flex;gap:10px;border:1px solid #bbb;border-radius:6px;padding:8px;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}
+.pi .n{flex:none;width:30px;height:30px;border-radius:50%;background:#1F4E78;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pi .t{font-weight:700;font-size:14px}
+.pi .m{font-size:12px;margin-top:2px}
+.pi .nt{font-size:12px;color:#555;white-space:pre-wrap;margin-top:2px}
+.pi .im{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pi .im img{width:170px;height:128px;object-fit:cover;border:1px solid #ccc;border-radius:4px}
+.pa{font-size:13px;font-weight:700;color:#1F4E78;margin:10px 0 4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <h1 id="title">客室インスペクション項目</h1>
+    <button class="iconbtn" id="menuBtn" aria-label="メニュー">☰ メニュー</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<div id="warn" style="display:none;background:#FDECEA;color:#8B1E14;padding:10px 14px;font-size:13px;line-height:1.6;border-bottom:1px solid #F1C4BF">⚠ この画面（アプリ内のプレビュー）では<b>データを保存できません</b>。閉じると消えます。SafariやChromeで開いてください。</div>
+<main id="list"></main>
+<button class="fab" id="addBtn">＋ 項目を追加</button>
+
+<!-- 編集シート -->
+<div class="ov" id="editOv"><div class="sheet">
+  <h2 id="editTitle">項目を追加</h2>
+  <label class="l">順番</label>
+  <input class="in" id="fOrder" type="number" inputmode="numeric" min="1" style="width:100px">
+  <label class="l">エリア</label>
+  <div class="chips" id="fArea"></div>
+  <label class="l">確認項目（場所・内容）</label>
+  <textarea class="in" id="fText" placeholder="例：ハンガー（向きを揃えて掛ける）"></textarea>
+  <label class="l">セット数</label>
+  <div class="stepper">
+    <button type="button" id="setMinus">−</button>
+    <input class="in" id="fSets" type="number" inputmode="numeric" min="0" placeholder="−">
+    <button type="button" id="setPlus">＋</button>
+    <input class="in unit" id="fUnit" placeholder="単位（本・枚）">
+  </div>
+  <label class="l">写真</label>
+  <div class="ph" id="fPhotos"></div>
+  <div class="phbtns">
+    <button type="button" class="btn" id="camBtn">📷 撮影</button>
+    <button type="button" class="btn" id="libBtn">🖼 写真を選ぶ</button>
+  </div>
+  <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+  <input type="file" id="libIn" accept="image/*" multiple hidden>
+  <label class="l">備考・ポイント</label>
+  <textarea class="in" id="fNote" placeholder="例：タグが見えないように"></textarea>
+  <div class="foot">
+    <button class="btn dan" id="delBtn">削除</button>
+    <span class="grow"></span>
+    <button class="btn" id="cancelBtn">キャンセル</button>
+    <button class="btn pri" id="saveBtn">保存</button>
+  </div>
+</div></div>
+
+<!-- メニュー -->
+<div class="ov" id="menuOv"><div class="sheet menu">
+  <h2>メニュー</h2>
+  <div class="cap">チェッカーに配る（ログイン・ネット不要）</div>
+  <button data-act="viewCur">📄 閲覧用ファイルを書き出す（この部屋タイプ）</button>
+  <button data-act="viewAll">📄 閲覧用ファイルを書き出す（全部屋タイプ）</button>
+  <button data-act="printCur">🖨 印刷・PDF保存（この部屋タイプ）</button>
+  <button data-act="printAll">🖨 印刷・PDF保存（全部屋タイプ）</button>
+  <div class="cap">編集</div>
+  <button data-act="types">🏷 部屋タイプ・エリアの名前を編集</button>
+  <button data-act="copy">📋 他の部屋タイプから項目をコピー</button>
+  <div class="cap">データ（この端末の中だけに保存されています）</div>
+  <button data-act="backup">💾 バックアップを書き出す</button>
+  <button data-act="restore">📂 バックアップから読み込む</button>
+  <button data-act="help">❓ 使い方</button>
+  <p class="hint" id="usage"></p>
+  <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
+  <input type="file" id="restoreIn" accept=".json,application/json" hidden>
+</div></div>
+
+<!-- 部屋タイプ・エリア編集 -->
+<div class="ov" id="typesOv"><div class="sheet">
+  <h2>部屋タイプ・エリアの編集</h2>
+  <label class="l">部屋タイプ（タブの順番）</label>
+  <div id="typeRows"></div>
+  <button class="btn" id="addType">＋ 部屋タイプを追加</button>
+  <label class="l">エリア（チェックの大枠）</label>
+  <div id="areaRows"></div>
+  <button class="btn" id="addArea">＋ エリアを追加</button>
+  <div class="foot"><span class="grow"></span><button class="btn" id="typesCancel">キャンセル</button><button class="btn pri" id="typesSave">保存</button></div>
+</div></div>
+
+<!-- コピー -->
+<div class="ov" id="copyOv"><div class="sheet">
+  <h2>他の部屋タイプから項目をコピー</h2>
+  <p class="hint">選んだ部屋タイプの全項目（写真も含む）を、今開いている部屋タイプの末尾に追加します。共通する項目を一度で作ってから、違うところだけ直す使い方がおすすめです。</p>
+  <label class="l">コピー元</label>
+  <select class="in" id="copyFrom"></select>
+  <div class="foot"><span class="grow"></span><button class="btn" id="copyCancel">キャンセル</button><button class="btn pri" id="copyDo">コピーする</button></div>
+</div></div>
+
+<!-- 使い方 -->
+<div class="ov" id="helpOv"><div class="sheet">
+  <h2>使い方</h2>
+  <div class="hint" style="font-size:14px;color:#333">
+  <p><b>1. 項目を作る</b><br>上のタブで部屋タイプを選び、「＋項目を追加」。実際に回る順番で追加していくと、そのまま確認の順番になります。順番は ▲▼ か、編集画面の「順番」で入れ替えられます。</p>
+  <p><b>2. 写真</b><br>「📷撮影」でその場で撮影、「🖼写真を選ぶ」で撮影済みの写真を追加できます。写真は自動で軽く（縮小）して保存します。</p>
+  <p><b>3. チェッカーに配る</b><br>「閲覧用ファイル」は写真入りの1ファイルです。LINEやメールで送れば、受け取った人はログインもネットもなしで開けます。紙で配るなら「印刷・PDF保存」。</p>
+  <p><b>4. データの保存場所</b><br>データはこの端末のブラウザの中にだけ保存されます。機種変更や別の端末で続きをするときは「バックアップを書き出す」→ 別の端末で「バックアップから読み込む」。定期的にバックアップを取っておくと安心です。</p>
+  </div>
+  <div class="foot"><span class="grow"></span><button class="btn pri" id="helpClose">閉じる</button></div>
+</div></div>
+
+<div id="viewer"><img id="viewerImg" alt=""></div>
+<div id="toast"></div>
+<div id="print" class="pt"></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2200);};
+
+/* ---------- IndexedDB ---------- */
+let db;
+const openDB=()=>new Promise((res,rej)=>{const r=indexedDB.open('inspect-app',1);r.onupgradeneeded=()=>{r.result.createObjectStore('kv');r.result.createObjectStore('photos');};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+const done=t=>new Promise((res,rej)=>{t.oncomplete=()=>res();t.onerror=t.onabort=()=>rej(t.error);});
+const rq=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+let mem=null; // 保存できない環境用（一時メモリ）
+const dbGet=(s,k)=>mem?Promise.resolve(mem[s].get(k)):rq(db.transaction(s).objectStore(s).get(k));
+async function dbPut(s,k,v){if(mem){mem[s].set(k,v);return;}const t=db.transaction(s,'readwrite');t.objectStore(s).put(v,k);await done(t);}
+async function dbDel(s,k){if(mem){mem[s].delete(k);return;}const t=db.transaction(s,'readwrite');t.objectStore(s).delete(k);await done(t);}
+async function dbClear(s){if(mem){mem[s].clear();return;}const t=db.transaction(s,'readwrite');t.objectStore(s).clear();await done(t);}
+
+/* ---------- 状態 ---------- */
+const DEFAULT={
+  types:['ツイン','トリプル','和室','ジュニアスイート','ウェルネス','サウスVIP'].map((n,i)=>({id:'t'+i,name:n})),
+  areas:['入口','クローゼット','リビング','洗面','トイレ','その他'],
+  items:[]
+};
+let S, cur;
+const save=()=>dbPut('kv','data',S);
+const itemsOf=tid=>S.items.filter(i=>i.typeId===tid).sort((a,b)=>a.order-b.order);
+const renumber=tid=>itemsOf(tid).forEach((it,i)=>it.order=i+1);
+
+/* 写真：本体(1024px)とサムネイル(240px)を data URL 文字列で保存 */
+const blobToDataURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error('ファイルを読み込めませんでした'));r.readAsDataURL(b);});
+const urls=new Map(); // 表示用キャッシュ
+async function photoURL(id,thumb){
+  const key=thumb?id+':t':id;
+  if(urls.has(key))return urls.get(key);
+  let v=await dbGet('photos',key);
+  if(!v&&thumb)v=await dbGet('photos',id);
+  if(!v)return '';
+  if(typeof v!=='string')v=await blobToDataURL(v); // 旧形式
+  urls.set(key,v);return v;
+}
+async function delPhoto(id){await dbDel('photos',id);await dbDel('photos',id+':t');urls.delete(id);urls.delete(id+':t');}
+async function copyPhoto(id){const nid=uid();const a=await dbGet('photos',id),t=await dbGet('photos',id+':t');if(!a)return null;await dbPut('photos',nid,a);if(t)await dbPut('photos',nid+':t',t);return nid;}
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('この画像形式は読み込めませんでした'));i.src=src;});}
+function shrink(img,max,q){
+  const w=img.naturalWidth,h=img.naturalHeight,s=Math.min(1,max/Math.max(w,h));
+  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  return c.toDataURL('image/jpeg',q);
+}
+async function compress(file){
+  let img,obj=null;
+  try{obj=URL.createObjectURL(file);img=await loadImg(obj);}
+  catch(_){img=await loadImg(await blobToDataURL(file));}
+  finally{if(obj)URL.revokeObjectURL(obj);}
+  return {full:shrink(img,1024,0.72),thumb:shrink(img,240,0.6)};
+}
+const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
+
+/* ---------- 描画 ---------- */
+function renderTabs(){
+  $('#tabs').innerHTML=S.types.map(t=>`<button class="tab${t.id===cur?' on':''}" data-id="${t.id}">${esc(t.name)}<small>${itemsOf(t.id).length}</small></button>`).join('');
+}
+async function render(){
+  renderTabs();
+  const list=itemsOf(cur), el=$('#list');
+  if(!list.length){el.innerHTML=`<div class="empty">まだ項目がありません。<br>「＋ 項目を追加」から、<br>回る順番どおりに追加していきましょう。</div>`;return;}
+  let html='',prev=null;
+  list.forEach((it,i)=>{
+    if(it.area!==prev){html+=`<div class="sec">${esc(it.area||'エリア未設定')}</div>`;prev=it.area;}
+    const sets=(it.sets!==''&&it.sets!=null)?`<span class="chip set">${esc(it.sets)}${esc(it.unit||'')}</span>`:'';
+    html+=`<div class="item" data-id="${it.id}">
+      <div class="num">${i+1}</div>
+      <div class="body" data-edit="${it.id}">
+        <div class="txt">${esc(it.text)}</div>
+        <div class="meta">${sets}</div>
+        ${it.note?`<div class="note">${esc(it.note)}</div>`:''}
+        ${it.photos.length?`<div class="thumbs">${it.photos.map(p=>`<img data-ph="${p}" alt="">`).join('')}</div>`:''}
+      </div>
+      <div class="ops"><button data-up="${it.id}" ${i===0?'disabled':''} aria-label="上へ">▲</button><button data-down="${it.id}" ${i===list.length-1?'disabled':''} aria-label="下へ">▼</button></div>
+    </div>`;
+  });
+  el.innerHTML=html;
+  for(const img of el.querySelectorAll('img[data-ph]'))img.src=await photoURL(img.dataset.ph,true);
+}
+
+/* ---------- イベント（一覧） ---------- */
+$('#tabs').onclick=e=>{const b=e.target.closest('.tab');if(!b)return;cur=b.dataset.id;try{localStorage.setItem('cur',cur)}catch(_){}render();window.scrollTo(0,0);};
+$('#list').onclick=async e=>{
+  const img=e.target.closest('img[data-ph]');
+  if(img){e.stopPropagation();$('#viewerImg').src=await photoURL(img.dataset.ph);$('#viewer').classList.add('show');return;}
+  const up=e.target.closest('[data-up]'),dn=e.target.closest('[data-down]');
+  if(up||dn){
+    const list=itemsOf(cur),i=list.findIndex(x=>x.id===(up?up.dataset.up:dn.dataset.down)),j=up?i-1:i+1;
+    if(j<0||j>=list.length)return;
+    [list[i].order,list[j].order]=[list[j].order,list[i].order];
+    await save();render();return;
+  }
+  const ed=e.target.closest('[data-edit]'); if(ed)openEdit(ed.dataset.edit);
+};
+$('#viewer').onclick=()=>$('#viewer').classList.remove('show');
+$('#addBtn').onclick=()=>openEdit(null);
+
+/* ---------- 編集 ---------- */
+let E=null; // {id, area, photos:[], added:[], removed:[]}
+function areaChips(){ $('#fArea').innerHTML=S.areas.map(a=>`<button type="button" class="${a===E.area?'on':''}">${esc(a)}</button>`).join(''); }
+$('#fArea').onclick=e=>{const b=e.target.closest('button');if(!b)return;E.area=b.textContent;areaChips();};
+async function photoRow(busy=0){
+  $('#fPhotos').innerHTML=E.photos.map(p=>`<div class="p"><img data-p="${p}" alt=""><button type="button" class="x" data-rm="${p}">✕</button></div>`).join('')
+    +Array.from({length:busy},()=>`<div class="busy">処理中…</div>`).join('');
+  for(const img of $('#fPhotos').querySelectorAll('img'))img.src=await photoURL(img.dataset.p,true);
+}
+$('#fPhotos').onclick=e=>{const b=e.target.closest('[data-rm]');if(!b)return;const id=b.dataset.rm;E.photos=E.photos.filter(x=>x!==id);E.removed.push(id);photoRow();};
+function openEdit(id){
+  const list=itemsOf(cur), it=id?S.items.find(x=>x.id===id):null;
+  const last=list[list.length-1];
+  E={id,area:it?it.area:(last?last.area:S.areas[0]),photos:it?[...it.photos]:[],added:[],removed:[]};
+  $('#editTitle').textContent=it?'項目を編集':'項目を追加';
+  $('#fOrder').value=it?list.indexOf(it)+1:list.length+1;
+  $('#fText').value=it?it.text:'';
+  $('#fSets').value=it?(it.sets??''):'';
+  $('#fUnit').value=it?(it.unit||''):'';
+  $('#fNote').value=it?(it.note||''):'';
+  $('#delBtn').style.visibility=it?'visible':'hidden';
+  areaChips();photoRow();
+  $('#editOv').classList.add('show');
+  if(!it)setTimeout(()=>$('#fText').focus(),50);
+}
+$('#setMinus').onclick=()=>{const v=parseInt($('#fSets').value||'0',10);$('#fSets').value=Math.max(0,v-1);};
+$('#setPlus').onclick=()=>{const v=parseInt($('#fSets').value||'0',10);$('#fSets').value=v+1;};
+$('#camBtn').onclick=()=>$('#camIn').click();
+$('#libBtn').onclick=()=>$('#libIn').click();
+let busyN=0;
+async function addFiles(files){
+  if(!files.length)return;
+  busyN+=files.length;$('#saveBtn').disabled=true;$('#saveBtn').textContent='写真を処理中…';
+  await photoRow(busyN);await nextFrame();
+  for(const f of files){
+    try{const r=await compress(f);const pid=uid();await dbPut('photos',pid,r.full);await dbPut('photos',pid+':t',r.thumb);
+      if(E){E.photos.push(pid);E.added.push(pid);}else await delPhoto(pid);}
+    catch(err){alert('写真を追加できませんでした：'+(err&&err.message||err));}
+    busyN--;if(E)await photoRow(busyN);await nextFrame();
+  }
+  if(!busyN){$('#saveBtn').disabled=false;$('#saveBtn').textContent='保存';}
+}
+$('#camIn').onchange=e=>{addFiles([...e.target.files]);e.target.value='';};
+$('#libIn').onchange=e=>{addFiles([...e.target.files]);e.target.value='';};
+async function closeEdit(commit){
+  if(!commit)for(const p of E.added)await delPhoto(p);
+  $('#editOv').classList.remove('show');E=null;
+}
+$('#cancelBtn').onclick=()=>closeEdit(false);
+$('#saveBtn').onclick=async()=>{try{await saveItem();}catch(err){alert('保存できませんでした：'+err.message);}};
+async function saveItem(){
+  const text=$('#fText').value.trim();
+  if(!text){alert('確認項目を入力してください');return;}
+  let it=E.id?S.items.find(x=>x.id===E.id):null;
+  if(!it){it={id:uid(),typeId:cur};S.items.push(it);}
+  Object.assign(it,{area:E.area,text,sets:$('#fSets').value===''?'':Number($('#fSets').value),unit:$('#fUnit').value.trim(),note:$('#fNote').value.trim(),photos:E.photos});
+  // 順番の反映
+  const others=itemsOf(cur).filter(x=>x!==it);
+  let pos=parseInt($('#fOrder').value,10); if(!(pos>=1))pos=others.length+1; pos=Math.min(pos,others.length+1);
+  others.splice(pos-1,0,it); others.forEach((x,i)=>x.order=i+1);
+  for(const p of E.removed)await delPhoto(p);
+  await save(); await closeEdit(true); render(); toast('保存しました');
+}
+$('#delBtn').onclick=async()=>{
+  if(!confirm('この項目を削除しますか？'))return;
+  const it=S.items.find(x=>x.id===E.id);
+  for(const p of new Set([...it.photos,...E.added]))await delPhoto(p);
+  S.items=S.items.filter(x=>x!==it);renumber(cur);
+  await save();$('#editOv').classList.remove('show');E=null;render();toast('削除しました');
+};
+
+/* ---------- メニュー ---------- */
+$('#menuBtn').onclick=async()=>{
+  $('#menuOv').classList.add('show');
+  try{const e=await navigator.storage.estimate();$('#usage').textContent=`使用容量：約${(e.usage/1048576).toFixed(1)}MB　項目数：${S.items.length}`;}catch(_){$('#usage').textContent=`項目数：${S.items.length}`;}
+};
+$('#menuOv').onclick=async e=>{
+  if(e.target===e.currentTarget){e.currentTarget.classList.remove('show');return;}
+  const a=e.target.closest('[data-act]')?.dataset.act; if(!a)return;
+  $('#menuOv').classList.remove('show');
+  if(a==='viewCur')exportViewer([cur]);
+  if(a==='viewAll')exportViewer(S.types.map(t=>t.id));
+  if(a==='printCur')doPrint([cur]);
+  if(a==='printAll')doPrint(S.types.map(t=>t.id));
+  if(a==='types')openTypes();
+  if(a==='copy')openCopy();
+  if(a==='backup')backup();
+  if(a==='restore')$('#restoreIn').click();
+  if(a==='help')$('#helpOv').classList.add('show');
+};
+$('#helpClose').onclick=()=>$('#helpOv').classList.remove('show');
+
+/* ---------- 書き出し共通 ---------- */
+async function deliver(blob,name){
+  const file=new File([blob],name,{type:blob.type});
+  const mobile=matchMedia('(pointer:coarse)').matches;
+  if(mobile&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:name});return;}catch(err){if(err.name==='AbortError')return;}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+}
+const today=()=>{const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;};
+async function docBody(tids,src){ // src: id -> url
+  let h='';
+  for(const tid of tids){
+    const t=S.types.find(x=>x.id===tid),list=itemsOf(tid);
+    h+=`<section class="typ" id="${tid}"><h2>${esc(t.name)}　<span style="font-size:12px;font-weight:400">全${list.length}項目</span></h2>`;
+    if(!list.length)h+='<p style="color:#888">項目なし</p>';
+    let prev=null;
+    for(const [i,it] of list.entries()){
+      if(it.area!==prev){h+=`<div class="pa">■ ${esc(it.area||'エリア未設定')}</div>`;prev=it.area;}
+      const sets=(it.sets!==''&&it.sets!=null)?`セット数：<b>${esc(it.sets)}${esc(it.unit||'')}</b>`:'';
+      const imgs=[];for(const p of it.photos){const u=await src(p);if(u)imgs.push(`<img src="${u}" alt="">`);}
+      h+=`<div class="pi"><div class="n">${i+1}</div><div><div class="t">${esc(it.text)}</div>${sets?`<div class="m">${sets}</div>`:''}${it.note?`<div class="nt">${esc(it.note)}</div>`:''}${imgs.length?`<div class="im">${imgs.join('')}</div>`:''}</div></div>`;
+    }
+    h+='</section>';
+  }
+  return h;
+}
+async function doPrint(tids){
+  $('#print').innerHTML=await docBody(tids,photoURL);
+  const imgs=[...$('#print').querySelectorAll('img')];
+  await Promise.all(imgs.map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r;})));
+  window.print();
+}
+async function exportViewer(tids){
+  toast('書き出し中…');
+  const css=`body{font-family:-apple-system,"Hiragino Sans","Meiryo UI",sans-serif;margin:0;padding:16px;color:#222;background:#fff}
+h1{font-size:20px;margin:0 0 4px;color:#1F4E78}.d{font-size:12px;color:#777;margin-bottom:12px}
+.nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}.nav a{background:#1F4E78;color:#fff;text-decoration:none;padding:6px 12px;border-radius:99px;font-size:13px}
+.typ{margin-bottom:28px}.typ h2{font-size:18px;border-bottom:3px solid #1F4E78;padding-bottom:4px;color:#1F4E78}
+.pa{font-size:14px;font-weight:700;color:#1F4E78;margin:14px 0 6px}
+.pi{display:flex;gap:10px;border:1px solid #ccc;border-radius:8px;padding:10px;margin-bottom:8px;break-inside:avoid;page-break-inside:avoid}
+.n{flex:none;width:32px;height:32px;border-radius:50%;background:#1F4E78;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.t{font-weight:700;font-size:15px;line-height:1.45}.m{font-size:13px;margin-top:3px}.nt{font-size:13px;color:#555;white-space:pre-wrap;margin-top:3px}
+.im{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.im img{width:100%;max-width:320px;border-radius:6px;border:1px solid #ddd}
+@media print{.nav{display:none}.typ{page-break-after:always}.typ:last-child{page-break-after:auto}}`;
+  const body=await docBody(tids,p=>photoURL(p));
+  const names=tids.map(id=>S.types.find(t=>t.id===id).name);
+  const nav=tids.length>1?`<div class="nav">${tids.map(id=>`<a href="#${id}">${esc(S.types.find(t=>t.id===id).name)}</a>`).join('')}</div>`:'';
+  const d=new Date();
+  const html=`<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>客室チェック項目 ${esc(names.join('・'))}</title><style>${css}</style></head><body><h1>客室チェック項目</h1><div class="d">作成日：${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</div>${nav}${body}</body></html>`;
+  const fname=`客室チェック項目_${tids.length>1?'全タイプ':names[0]}_${today()}.html`;
+  await deliver(new Blob([html],{type:'text/html'}),fname);
+}
+
+/* ---------- バックアップ ---------- */
+async function backup(){
+  toast('書き出し中…');
+  const photos={};
+  for(const it of S.items)for(const p of it.photos){const u=await photoURL(p);if(u)photos[p]=u;}
+  const blob=new Blob([JSON.stringify({app:'inspect-app',version:1,data:S,photos})],{type:'application/json'});
+  await deliver(blob,`インスペクション_バックアップ_${today()}.json`);
+}
+$('#restoreIn').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const j=JSON.parse(await f.text());
+    if(j.app!=='inspect-app'||!j.data)throw new Error('このアプリのバックアップではありません');
+    if(!confirm('今の端末のデータを、バックアップの内容で置き換えます。よろしいですか？'))return;
+    await dbClear('photos');
+    urls.clear();
+    for(const [k,v] of Object.entries(j.photos||{})){await dbPut('photos',k,v);try{await dbPut('photos',k+':t',shrink(await loadImg(v),240,0.6));}catch(_){}}
+    S=j.data;cur=S.types[0]?.id;await save();render();toast('読み込みました');
+  }catch(err){alert('読み込めませんでした：'+err.message);}
+};
+
+/* ---------- 部屋タイプ・エリア編集 ---------- */
+let T=null;
+function typeRows(){
+  $('#typeRows').innerHTML=T.types.map((t,i)=>`<div class="trow"><input class="in" data-ti="${i}" value="${esc(t.name)}"><button data-tu="${i}">▲</button><button data-td="${i}">▼</button><button data-tx="${i}" style="color:#C0392B">✕</button></div>`).join('');
+  $('#areaRows').innerHTML=T.areas.map((a,i)=>`<div class="trow"><input class="in" data-ai="${i}" value="${esc(a)}"><button data-au="${i}">▲</button><button data-ad="${i}">▼</button><button data-ax="${i}" style="color:#C0392B">✕</button></div>`).join('');
+}
+function openTypes(){T={types:S.types.map(t=>({...t})),areas:[...S.areas]};typeRows();$('#typesOv').classList.add('show');}
+$('#typesOv').oninput=e=>{const t=e.target;if(t.dataset.ti!=null)T.types[t.dataset.ti].name=t.value;if(t.dataset.ai!=null)T.areas[t.dataset.ai]=t.value;};
+$('#typesOv').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+  const mv=(arr,i,j)=>{if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];typeRows();};
+  if(d.tu)mv(T.types,+d.tu,+d.tu-1);if(d.td)mv(T.types,+d.td,+d.td+1);
+  if(d.au)mv(T.areas,+d.au,+d.au-1);if(d.ad)mv(T.areas,+d.ad,+d.ad+1);
+  if(d.tx){const t=T.types[+d.tx],n=itemsOf(t.id).length;if(T.types.length<=1){alert('部屋タイプは1つ以上必要です');return;}
+    if(!confirm(`「${t.name}」を削除しますか？${n?`\n登録済みの${n}項目も削除されます。`:''}`))return;T.types.splice(+d.tx,1);typeRows();}
+  if(d.ax){T.areas.splice(+d.ax,1);typeRows();}
+};
+$('#addType').onclick=()=>{T.types.push({id:'t'+uid(),name:'新しい部屋タイプ'});typeRows();};
+$('#addArea').onclick=()=>{T.areas.push('新しいエリア');typeRows();};
+$('#typesCancel').onclick=()=>$('#typesOv').classList.remove('show');
+$('#typesSave').onclick=async()=>{
+  const keep=new Set(T.types.map(t=>t.id));
+  for(const it of S.items.filter(x=>!keep.has(x.typeId)))for(const p of it.photos)await delPhoto(p);
+  S.items=S.items.filter(x=>keep.has(x.typeId));
+  S.types=T.types.map(t=>({...t,name:t.name.trim()||'名称未設定'}));
+  S.areas=T.areas.map(a=>a.trim()).filter(Boolean);
+  if(!keep.has(cur))cur=S.types[0].id;
+  await save();$('#typesOv').classList.remove('show');render();toast('保存しました');
+};
+
+/* ---------- コピー ---------- */
+function openCopy(){
+  const opts=S.types.filter(t=>t.id!==cur);
+  if(!opts.length){alert('コピー元になる部屋タイプがありません');return;}
+  $('#copyFrom').innerHTML=opts.map(t=>`<option value="${t.id}">${esc(t.name)}（${itemsOf(t.id).length}項目）</option>`).join('');
+  $('#copyOv').classList.add('show');
+}
+$('#copyCancel').onclick=()=>$('#copyOv').classList.remove('show');
+$('#copyDo').onclick=async()=>{
+  const src=itemsOf($('#copyFrom').value);let base=itemsOf(cur).length;
+  if(!src.length){alert('コピー元に項目がありません');return;}
+  for(const it of src){
+    const photos=[];for(const p of it.photos){const id=await copyPhoto(p);if(id)photos.push(id);}
+    S.items.push({...it,id:uid(),typeId:cur,order:++base,photos});
+  }
+  await save();$('#copyOv').classList.remove('show');render();toast(`${src.length}項目をコピーしました`);
+};
+
+/* ---------- 起動 ---------- */
+(async()=>{
+  try{db=await openDB();}catch(err){mem={kv:new Map(),photos:new Map()};$('#warn').style.display='block';}
+  try{
+    S=await dbGet('kv','data')||JSON.parse(JSON.stringify(DEFAULT));
+    let saved=null;try{saved=localStorage.getItem('cur')}catch(_){}
+    cur=S.types.some(t=>t.id===saved)?saved:S.types[0].id;
+    render();
+    navigator.storage?.persist?.();
+  }catch(err){$('#list').innerHTML=`<div class="empty">データを開けませんでした：${esc(err.message)}<br>プライベートブラウズでは使えない場合があります。</div>`;}
+  if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
