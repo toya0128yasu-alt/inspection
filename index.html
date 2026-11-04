@@ -180,13 +180,15 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="types">🏷 部屋タイプ・エリアの名前を編集</button>
   <button data-act="copy">📋 他の部屋タイプから項目をコピー</button>
   <div class="cap">データ（この端末の中だけに保存されています）</div>
-  <button data-act="backup">💾 バックアップを書き出す</button>
-  <button data-act="restore">📂 バックアップから読み込む</button>
+  <button data-act="backup">💾 バックアップ／共有ファイルを書き出す</button>
+  <button data-act="merge">🤝 相手のファイルと合体読み込み</button>
+  <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05b</p>
+  <p class="hint">アプリのバージョン：2026-11-05c</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
+  <input type="file" id="mergeIn" accept=".json,application/json" hidden>
 </div></div>
 
 <!-- 部屋タイプ・エリア編集 -->
@@ -217,6 +219,7 @@ textarea.in{min-height:70px;resize:vertical}
   <p><b>1. 項目を作る</b><br>上のタブで部屋タイプを選び、「＋項目を追加」。実際に回る順番で追加していくと、そのまま確認の順番になります。順番は ▲▼ か、編集画面の「順番」で入れ替えられます。</p>
   <p><b>2. 写真</b><br>「📷撮影」でその場で撮影、「🖼写真を選ぶ」で撮影済みの写真を追加できます。写真は自動で軽く（縮小）して保存します。</p>
   <p><b>3. チェッカーに配る</b><br>「閲覧用ファイル」は写真入りの1ファイルです。LINEやメールで送れば、受け取った人はログインもネットもなしで開けます。紙で配るなら「印刷・PDF保存」。</p>
+  <p><b>★ 2人で一緒に作る</b><br>「💾バックアップ／共有ファイルを書き出す」→ LINEなどで相手に送る → 相手は「🤝相手のファイルと合体読み込み」。お互いの追加・修正・削除が合わさります。同じ項目を2人とも直した場合は、後から直した方が残ります。部屋タイプなどで担当を分けると安心です。</p>
   <p><b>4. データの保存場所</b><br>データはこの端末のブラウザの中にだけ保存されます。機種変更や別の端末で続きをするときは「バックアップを書き出す」→ 別の端末で「バックアップから読み込む」。定期的にバックアップを取っておくと安心です。</p>
   </div>
   <div class="foot"><span class="grow"></span><button class="btn pri" id="helpClose">閉じる</button></div>
@@ -252,7 +255,7 @@ const DEFAULT={
   items:[]
 };
 let S, cur;
-const save=()=>dbPut('kv','data',S);
+
 // 後から増えた部屋タイプを既存データにも追加（各1回だけ。あとで削除した場合は戻さない）
 const ADDED_TYPES=[
   {key:'kids',id:'tkids',name:'キッズフレンドリー',match:'キッズ'},
@@ -475,6 +478,7 @@ $('#menuOv').onclick=async e=>{
   if(a==='copy')openCopy();
   if(a==='backup')backup();
   if(a==='restore')$('#restoreIn').click();
+  if(a==='merge')$('#mergeIn').click();
   if(a==='help')$('#helpOv').classList.add('show');
 };
 $('#helpClose').onclick=()=>$('#helpOv').classList.remove('show');
@@ -560,7 +564,7 @@ $('#restoreIn').onchange=async e=>{
     await dbClear('photos');
     urls.clear();
     for(const [k,v] of Object.entries(j.photos||{})){await dbPut('photos',k,v);try{await dbPut('photos',k+':t',shrink(await loadImg(v),240,0.6));}catch(_){}}
-    S=j.data;addKids();cur=S.types[0]?.id;await save();render();toast('読み込みました');
+    S=j.data;SNAP=null;addKids();cur=S.types[0]?.id;await save();render();toast('読み込みました');
   }catch(err){alert('読み込めませんでした：'+err.message);}
 };
 
@@ -615,12 +619,71 @@ $('#copyDo').onclick=async()=>{
   await save();$('#copyOv').classList.remove('show');render();toast(`${src.length}項目をコピーしました`);
 };
 
+const APP_ID='inspect-app';
+/* ---------- 2人で編集：変更日時の記録と合体読み込み ---------- */
+// 保存のたびに「前回保存時との違い」を調べ、変わった項目に更新日時(u)、消えた項目に削除記録(tomb)を付ける
+const CFG_KEYS=['types','areas'], UNION_KEYS=['types'], GK='typeId';
+let SNAP=null;
+const itemKey=it=>{const {u,...r}=it;return JSON.stringify(r);};
+const cfgKey=()=>JSON.stringify(CFG_KEYS.map(k=>S[k]));
+function snap(){const m=new Map();for(const it of S.items)m.set(it.id,itemKey(it));return {items:m,cfg:cfgKey()};}
+function stamp(){
+  if(!SNAP){SNAP=snap();return;}
+  const now=Date.now();S.tomb=S.tomb||{};const seen=new Set();
+  for(const it of S.items){seen.add(it.id);if(SNAP.items.get(it.id)!==itemKey(it))it.u=now;}
+  for(const id of SNAP.items.keys())if(!seen.has(id))S.tomb[id]=now;
+  const old=now-200*864e5;for(const [k,v] of Object.entries(S.tomb))if(v<old)delete S.tomb[k]; // 古い削除記録は整理
+  if(SNAP.cfg!==cfgKey())S.cfgU=now;
+  SNAP=snap();
+}
+const save=()=>{stamp();return dbPut('kv','data',S);};
+async function dbKeys(s){if(mem)return [...mem[s].keys()];return rq(db.transaction(s).objectStore(s).getAllKeys());}
+async function mergeData(j){
+  // 相手のデータも同じ形にそろえる（古い版のファイルでもOK）
+  const mine=S;S=JSON.parse(JSON.stringify(j.data));try{addKids();}finally{var B=S;S=mine;}
+  const A=S,tomb={...(A.tomb||{})};
+  for(const [k,v] of Object.entries(B.tomb||{}))tomb[k]=Math.max(tomb[k]||0,v);
+  const map=new Map(A.items.map(it=>[it.id,it])),had=new Set(map.keys());let add=0,upd=0,del=0;
+  for(const it of B.items||[]){const a=map.get(it.id);
+    if(!a){if(!(tomb[it.id]>=(it.u||0))){map.set(it.id,it);add++;}}
+    else if((it.u||0)>(a.u||0)){map.set(it.id,it);upd++;}}
+  for(const [id,it] of map)if(tomb[id]&&tomb[id]>=(it.u||0)){map.delete(id);if(had.has(id))del++;}
+  // 設定（部屋タイプ名・エリアなど）は、後から変えた方を採用。どちらかにしかない部屋タイプ等は両方残す
+  const keepA={};for(const k of UNION_KEYS)keepA[k]=JSON.parse(JSON.stringify(A[k]||[]));
+  let cfg=false;
+  if((B.cfgU||0)>(A.cfgU||0)){for(const k of CFG_KEYS)if(B[k]!==undefined)A[k]=B[k];A.cfgU=B.cfgU;cfg=true;}
+  for(const k of UNION_KEYS){const other=cfg?keepA[k]:(B[k]||[]);const ids=new Set((A[k]||[]).map(x=>x.id));for(const x of other)if(!ids.has(x.id)){A[k].push(x);ids.add(x.id);}}
+  A.items=[...map.values()];A.tomb=tomb;
+  // 写真：必要なものを取り込み、どの項目からも使われなくなった写真は片付け
+  const need=new Set();for(const it of A.items)for(const ph of it.photos||[])need.add(ph);
+  for(const ph of need){if(await dbGet('photos',ph))continue;const v=j.photos&&j.photos[ph];if(!v)continue;
+    await dbPut('photos',ph,v);try{await dbPut('photos',ph+':t',shrink(await loadImg(v),240,0.6));}catch(_){}}
+  for(const k of await dbKeys('photos')){const base=String(k).replace(/:t$/,'');if(!need.has(base)){await dbDel('photos',k);urls.delete(k);}}
+  // 並び順を整える
+  for(const g of S.types)A.items.filter(x=>x[GK]===g.id).sort((a,b)=>(a.order-b.order)||((a.u||0)-(b.u||0))).forEach((x,i)=>x.order=i+1);
+  addKids();
+  SNAP=null;await save();
+  return {add,upd,del,cfg};
+}
+$('#mergeIn').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const j=JSON.parse(await f.text());
+    if(j.app!==APP_ID||!j.data)throw new Error('このアプリのファイルではありません');
+    if(!confirm('相手のデータと合体します。\n・相手が追加した項目 → 追加\n・同じ項目 → 後から直した方を残す\n・相手が削除した項目 → 削除\nよろしいですか？'))return;
+    toast('合体中…');
+    const r=await mergeData(j);if(!S.types.some(t=>t.id===cur))cur=S.types[0].id; render();
+    alert(`合体しました。\n追加：${r.add}項目　更新：${r.upd}項目　削除：${r.del}項目${r.cfg?'\n部屋タイプ・エリアなどの設定も相手の新しい内容にそろえました。':''}`);
+  }catch(err){alert('合体できませんでした：'+err.message);}
+};
+
 /* ---------- 起動 ---------- */
 (async()=>{
   try{db=await openDB();}catch(err){mem={kv:new Map(),photos:new Map()};$('#warn').style.display='block';}
   try{
     S=await dbGet('kv','data')||JSON.parse(JSON.stringify(DEFAULT));
     if(addKids())await save();
+    if(!SNAP)SNAP=snap();
     let saved=null;try{saved=localStorage.getItem('cur')}catch(_){}
     cur=S.types.some(t=>t.id===saved)?saved:S.types[0].id;
     render();
