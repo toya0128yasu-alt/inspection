@@ -239,12 +239,14 @@ async function dbClear(s){if(mem){mem[s].clear();return;}const t=db.transaction(
 
 /* ---------- 状態 ---------- */
 const DEFAULT={
-  types:['ツイン','トリプル','和室','ジュニアスイート','ウェルネス','サウスVIP'].map((n,i)=>({id:'t'+i,name:n})),
+  types:['ツイン','トリプル','和室','ジュニアスイート','ウェルネス','サウスVIP'].map((n,i)=>({id:'t'+i,name:n})).concat([{id:'tkids',name:'キッズフレンドリー'}]),kids:1,
   areas:['入口','クローゼット','リビング','洗面','トイレ','その他'],
   items:[]
 };
 let S, cur;
 const save=()=>dbPut('kv','data',S);
+// 既存データにキッズフレンドリーを追加（一度だけ。あとで削除した場合は戻さない）
+function addKids(){if(S.kids)return false;if(!S.types.some(t=>t.name.includes('キッズ')))S.types.push({id:'tkids',name:'キッズフレンドリー'});S.kids=1;return true;}
 const itemsOf=tid=>S.items.filter(i=>i.typeId===tid).sort((a,b)=>a.order-b.order);
 const renumber=tid=>itemsOf(tid).forEach((it,i)=>it.order=i+1);
 
@@ -513,7 +515,7 @@ $('#restoreIn').onchange=async e=>{
     await dbClear('photos');
     urls.clear();
     for(const [k,v] of Object.entries(j.photos||{})){await dbPut('photos',k,v);try{await dbPut('photos',k+':t',shrink(await loadImg(v),240,0.6));}catch(_){}}
-    S=j.data;cur=S.types[0]?.id;await save();render();toast('読み込みました');
+    S=j.data;addKids();cur=S.types[0]?.id;await save();render();toast('読み込みました');
   }catch(err){alert('読み込めませんでした：'+err.message);}
 };
 
@@ -570,6 +572,7 @@ $('#copyDo').onclick=async()=>{
   try{db=await openDB();}catch(err){mem={kv:new Map(),photos:new Map()};$('#warn').style.display='block';}
   try{
     S=await dbGet('kv','data')||JSON.parse(JSON.stringify(DEFAULT));
+    if(addKids())await save();
     let saved=null;try{saved=localStorage.getItem('cur')}catch(_){}
     cur=S.types.some(t=>t.id===saved)?saved:S.types[0].id;
     render();
