@@ -43,6 +43,11 @@ main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
 .ops{flex:none;display:flex;flex-direction:column;gap:4px}
 .ops button{border:1px solid var(--line);background:#fff;border-radius:8px;width:38px;height:32px;font-size:14px}
 .ops button:disabled{opacity:.3}
+.wings{display:flex;gap:6px;margin:2px 0 8px;flex-wrap:wrap;align-items:center}
+.wings span{font-size:12px;color:var(--sub);font-weight:700;margin-right:2px}
+.wings button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 16px;font-size:14px}
+.wings button.on{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700}
+.chip.wg{background:#E8E4F5;color:#4A3B8C}
 .empty{text-align:center;color:var(--sub);padding:60px 20px;line-height:1.8}
 .fab{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 18px);background:var(--navy);color:#fff;border:0;border-radius:99px;padding:14px 22px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
 /* modal */
@@ -135,6 +140,7 @@ textarea.in{min-height:70px;resize:vertical}
   <input class="in" id="fOrder" type="number" inputmode="numeric" min="1" style="width:100px">
   <label class="l">エリア</label>
   <div class="chips" id="fArea"></div>
+  <div id="fWingBox"><label class="l">対象の棟</label><div class="chips" id="fWing"></div></div>
   <label class="l">確認項目（場所・内容）</label>
   <textarea class="in" id="fText" placeholder="例：ハンガー（向きを揃えて掛ける）"></textarea>
   <label class="l">セット数</label>
@@ -178,7 +184,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05</p>
+  <p class="hint">アプリのバージョン：2026-11-05b</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
 </div></div>
@@ -255,6 +261,8 @@ const ADDED_TYPES=[
   {key:'log',id:'tlog',name:'ログハウス',match:'ログハウス'},
   {key:'cottage',id:'tcot',name:'コテージ',match:'コテージ'},
 ];
+// 棟（サウス・ノース・C棟）の初期設定
+const DEF_WINGS={'ツイン':['サウス','ノース','C棟'],'トリプル':['サウス','ノース']};
 function addKids(){
   S.added=S.added||(S.kids?['kids']:[]);let ch=false;
   for(const a of ADDED_TYPES){
@@ -265,9 +273,14 @@ function addKids(){
     }
     S.added.push(a.key);ch=true;
   }
+  if(!S.added.includes('wings')){for(const t of S.types)if(DEF_WINGS[t.name]&&!(t.wings&&t.wings.length))t.wings=[...DEF_WINGS[t.name]];S.added.push('wings');ch=true;}
   delete S.kids;return ch;
 }
 const itemsOf=tid=>S.items.filter(i=>i.typeId===tid).sort((a,b)=>a.order-b.order);
+const wingsOf=tid=>(S.types.find(t=>t.id===tid)||{}).wings||[];
+let curWing={};try{curWing=JSON.parse(localStorage.getItem('wing')||'{}')||{};}catch(_){}
+const wingNow=()=>{const w=curWing[cur];return wingsOf(cur).includes(w)?w:'';};
+const visible=it=>{const w=wingNow();return !w||!it.wing||it.wing===w;};
 const renumber=tid=>itemsOf(tid).forEach((it,i)=>it.order=i+1);
 
 /* 写真：本体(1024px)とサムネイル(240px)を data URL 文字列で保存 */
@@ -306,9 +319,10 @@ function renderTabs(){
 }
 async function render(){
   renderTabs();
-  const list=itemsOf(cur), el=$('#list');
-  if(!list.length){el.innerHTML=`<div class="empty">まだ項目がありません。<br>「＋ 項目を追加」から、<br>回る順番どおりに追加していきましょう。</div>`;return;}
-  let html='',prev=null;
+  const all=itemsOf(cur), list=all.filter(visible), el=$('#list'), ws=wingsOf(cur), w=wingNow();
+  const bar=ws.length?`<div class="wings"><span>棟</span><button data-wing="" class="${w?'':'on'}">すべて</button>${ws.map(x=>`<button data-wing="${esc(x)}" class="${x===w?'on':''}">${esc(x)}</button>`).join('')}</div>`:'';
+  if(!list.length){el.innerHTML=bar+`<div class="empty">まだ項目がありません。<br>「＋ 項目を追加」から、<br>回る順番どおりに追加していきましょう。</div>`;return;}
+  let html=bar,prev=null;
   list.forEach((it,i)=>{
     if(it.area!==prev){html+=`<div class="sec">${esc(it.area||'エリア未設定')}</div>`;prev=it.area;}
     const sets=(it.sets!==''&&it.sets!=null)?`<span class="chip set">${esc(it.sets)}${esc(it.unit||'')}</span>`:'';
@@ -316,7 +330,7 @@ async function render(){
       <div class="num">${i+1}</div>
       <div class="body" data-edit="${it.id}">
         <div class="txt">${esc(it.text)}</div>
-        <div class="meta">${sets}</div>
+        <div class="meta">${sets}${(!w&&it.wing)?`<span class="chip wg">${esc(it.wing)}のみ</span>`:''}</div>
         ${it.note?`<div class="note">${esc(it.note)}</div>`:''}
         ${it.photos.length?`<div class="thumbs">${it.photos.map(p=>`<img data-ph="${p}" alt="">`).join('')}</div>`:''}
       </div>
@@ -332,9 +346,11 @@ $('#tabs').onclick=e=>{const b=e.target.closest('.tab');if(!b)return;cur=b.datas
 $('#list').onclick=async e=>{
   const img=e.target.closest('img[data-ph]');
   if(img){e.stopPropagation();const ids=[...img.parentElement.querySelectorAll('img[data-ph]')].map(x=>x.dataset.ph);openViewer(ids,ids.indexOf(img.dataset.ph));return;}
+  const wb=e.target.closest('[data-wing]');
+  if(wb){curWing[cur]=wb.dataset.wing;try{localStorage.setItem('wing',JSON.stringify(curWing))}catch(_){}render();return;}
   const up=e.target.closest('[data-up]'),dn=e.target.closest('[data-down]');
   if(up||dn){
-    const list=itemsOf(cur),i=list.findIndex(x=>x.id===(up?up.dataset.up:dn.dataset.down)),j=up?i-1:i+1;
+    const list=itemsOf(cur).filter(visible),i=list.findIndex(x=>x.id===(up?up.dataset.up:dn.dataset.down)),j=up?i-1:i+1;
     if(j<0||j>=list.length)return;
     [list[i].order,list[j].order]=[list[j].order,list[i].order];
     await save();render();return;
@@ -370,6 +386,9 @@ $('#addBtn').onclick=()=>openEdit(null);
 let E=null; // {id, area, photos:[], added:[], removed:[]}
 function areaChips(){ $('#fArea').innerHTML=S.areas.map(a=>`<button type="button" class="${a===E.area?'on':''}">${esc(a)}</button>`).join(''); }
 $('#fArea').onclick=e=>{const b=e.target.closest('button');if(!b)return;E.area=b.textContent;areaChips();};
+function wingChips(){const ws=wingsOf(cur);$('#fWingBox').style.display=ws.length?'':'none';
+  $('#fWing').innerHTML=[['','全部の棟（共通）'],...ws.map(x=>[x,x+'のみ'])].map(([v,l])=>`<button type="button" data-w="${esc(v)}" class="${v===E.wing?'on':''}">${esc(l)}</button>`).join('');}
+$('#fWing').onclick=e=>{const b=e.target.closest('[data-w]');if(!b)return;E.wing=b.dataset.w;wingChips();};
 async function photoRow(busy=0){
   $('#fPhotos').innerHTML=E.photos.map(p=>`<div class="p"><img data-p="${p}" alt=""><button type="button" class="x" data-rm="${p}">✕</button></div>`).join('')
     +Array.from({length:busy},()=>`<div class="busy">処理中…</div>`).join('');
@@ -377,17 +396,17 @@ async function photoRow(busy=0){
 }
 $('#fPhotos').onclick=e=>{const b=e.target.closest('[data-rm]');if(!b)return;const id=b.dataset.rm;E.photos=E.photos.filter(x=>x!==id);E.removed.push(id);photoRow();};
 function openEdit(id){
-  const list=itemsOf(cur), it=id?S.items.find(x=>x.id===id):null;
-  const last=list[list.length-1];
-  E={id,area:it?it.area:(last?last.area:S.areas[0]),photos:it?[...it.photos]:[],added:[],removed:[]};
+  const list=itemsOf(cur), shown=list.filter(visible), it=id?S.items.find(x=>x.id===id):null;
+  const last=shown[shown.length-1];
+  E={id,wing:it?(it.wing||''):'',area:it?it.area:(last?last.area:S.areas[0]),photos:it?[...it.photos]:[],added:[],removed:[]};
   $('#editTitle').textContent=it?'項目を編集':'項目を追加';
-  $('#fOrder').value=it?list.indexOf(it)+1:list.length+1;
+  $('#fOrder').value=it?(shown.indexOf(it)+1||list.indexOf(it)+1):shown.length+1;
   $('#fText').value=it?it.text:'';
   $('#fSets').value=it?(it.sets??''):'';
   $('#fUnit').value=it?(it.unit||''):'';
   $('#fNote').value=it?(it.note||''):'';
   $('#delBtn').style.visibility=it?'visible':'hidden';
-  areaChips();photoRow();
+  areaChips();wingChips();photoRow();
   $('#editOv').classList.add('show');
   if(!it)setTimeout(()=>$('#fText').focus(),50);
 }
@@ -421,11 +440,13 @@ async function saveItem(){
   if(!text){alert('確認項目を入力してください');return;}
   let it=E.id?S.items.find(x=>x.id===E.id):null;
   if(!it){it={id:uid(),typeId:cur};S.items.push(it);}
-  Object.assign(it,{area:E.area,text,sets:$('#fSets').value===''?'':Number($('#fSets').value),unit:$('#fUnit').value.trim(),note:$('#fNote').value.trim(),photos:E.photos});
+  Object.assign(it,{wing:wingsOf(cur).includes(E.wing)?E.wing:'',area:E.area,text,sets:$('#fSets').value===''?'':Number($('#fSets').value),unit:$('#fUnit').value.trim(),note:$('#fNote').value.trim(),photos:E.photos});
   // 順番の反映
-  const others=itemsOf(cur).filter(x=>x!==it);
-  let pos=parseInt($('#fOrder').value,10); if(!(pos>=1))pos=others.length+1; pos=Math.min(pos,others.length+1);
-  others.splice(pos-1,0,it); others.forEach((x,i)=>x.order=i+1);
+  // 順番＝表示中の並び（棟で絞り込み中ならその並び）での位置
+  const others=itemsOf(cur).filter(x=>x!==it),shown=others.filter(visible);
+  let pos=parseInt($('#fOrder').value,10); if(!(pos>=1))pos=shown.length+1;
+  const anchor=shown[Math.min(pos,shown.length+1)-1];
+  others.splice(anchor?others.indexOf(anchor):others.length,0,it); others.forEach((x,i)=>x.order=i+1);
   for(const p of E.removed)await delPhoto(p);
   await save(); await closeEdit(true); render(); toast('保存しました');
 }
@@ -469,11 +490,14 @@ async function deliver(blob,name){
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
 }
 const today=()=>{const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;};
+// 書き出しの区切り：棟のある部屋タイプは棟ごとに分ける
+function sectionsOf(tids){const out=[];for(const tid of tids){const t=S.types.find(x=>x.id===tid),ws=t.wings||[];
+  if(ws.length)ws.forEach((w,i)=>out.push({id:`${tid}-${i}`,tid,wing:w,title:`${t.name}（${w}）`}));else out.push({id:tid,tid,wing:'',title:t.name});}return out;}
 async function docBody(tids,src){ // src: id -> url
   let h='';
-  for(const tid of tids){
-    const t=S.types.find(x=>x.id===tid),list=itemsOf(tid);
-    h+=`<section class="typ" id="${tid}"><h2>${esc(t.name)}　<span style="font-size:12px;font-weight:400">全${list.length}項目</span></h2>`;
+  for(const sec of sectionsOf(tids)){
+    const tid=sec.tid,list=itemsOf(tid).filter(it=>!sec.wing||!it.wing||it.wing===sec.wing);
+    h+=`<section class="typ" id="${sec.id}"><h2>${esc(sec.title)}　<span style="font-size:12px;font-weight:400">全${list.length}項目</span></h2>`;
     if(!list.length)h+='<p style="color:#888">項目なし</p>';
     let prev=null;
     for(const [i,it] of list.entries()){
@@ -511,7 +535,8 @@ h1{font-size:20px;margin:0 0 4px;color:#1F4E78}.d{font-size:12px;color:#777;marg
 @media print{.nav{display:none}.typ{page-break-after:always}.typ:last-child{page-break-after:auto}}`;
   const body=await docBody(tids,p=>photoURL(p));
   const names=tids.map(id=>S.types.find(t=>t.id===id).name);
-  const nav=tids.length>1?`<div class="nav">${tids.map(id=>`<a href="#${id}">${esc(S.types.find(t=>t.id===id).name)}</a>`).join('')}</div>`:'';
+  const secs=sectionsOf(tids);
+  const nav=secs.length>1?`<div class="nav">${secs.map(x=>`<a href="#${x.id}">${esc(x.title)}</a>`).join('')}</div>`:'';
   const d=new Date();
   const html=`<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>客室チェック項目 ${esc(names.join('・'))}</title><style>${css}</style></head><body><h1>客室チェック項目</h1><div class="d">作成日：${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</div>${nav}${body}</body></html>`;
   const fname=`客室チェック項目_${tids.length>1?'全タイプ':names[0]}_${today()}.html`;
@@ -542,11 +567,11 @@ $('#restoreIn').onchange=async e=>{
 /* ---------- 部屋タイプ・エリア編集 ---------- */
 let T=null;
 function typeRows(){
-  $('#typeRows').innerHTML=T.types.map((t,i)=>`<div class="trow"><input class="in" data-ti="${i}" value="${esc(t.name)}"><button data-tu="${i}">▲</button><button data-td="${i}">▼</button><button data-tx="${i}" style="color:#C0392B">✕</button></div>`).join('');
+  $('#typeRows').innerHTML=T.types.map((t,i)=>`<div class="trow"><input class="in" data-ti="${i}" value="${esc(t.name)}"><button data-tu="${i}">▲</button><button data-td="${i}">▼</button><button data-tx="${i}" style="color:#C0392B">✕</button></div><div class="trow" style="margin:-2px 0 12px 14px"><span class="hint" style="flex:none">棟：</span><input class="in" data-tw="${i}" value="${esc((t.wings||[]).join('、'))}" placeholder="なし（例：サウス、ノース）" style="font-size:14px;padding:7px"></div>`).join('');
   $('#areaRows').innerHTML=T.areas.map((a,i)=>`<div class="trow"><input class="in" data-ai="${i}" value="${esc(a)}"><button data-au="${i}">▲</button><button data-ad="${i}">▼</button><button data-ax="${i}" style="color:#C0392B">✕</button></div>`).join('');
 }
 function openTypes(){T={types:S.types.map(t=>({...t})),areas:[...S.areas]};typeRows();$('#typesOv').classList.add('show');}
-$('#typesOv').oninput=e=>{const t=e.target;if(t.dataset.ti!=null)T.types[t.dataset.ti].name=t.value;if(t.dataset.ai!=null)T.areas[t.dataset.ai]=t.value;};
+$('#typesOv').oninput=e=>{const t=e.target;if(t.dataset.tw!=null)T.types[t.dataset.tw].wings=t.value.split(/[,、，\s]+/).map(x=>x.trim()).filter(Boolean);if(t.dataset.ti!=null)T.types[t.dataset.ti].name=t.value;if(t.dataset.ai!=null)T.areas[t.dataset.ai]=t.value;};
 $('#typesOv').onclick=e=>{
   const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   const mv=(arr,i,j)=>{if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];typeRows();};
@@ -561,6 +586,9 @@ $('#addArea').onclick=()=>{T.areas.push('新しいエリア');typeRows();};
 $('#typesCancel').onclick=()=>$('#typesOv').classList.remove('show');
 $('#typesSave').onclick=async()=>{
   const keep=new Set(T.types.map(t=>t.id));
+  const lost=S.items.filter(it=>it.wing&&keep.has(it.typeId)&&!(T.types.find(t=>t.id===it.typeId).wings||[]).includes(it.wing));
+  if(lost.length&&!confirm(`棟の名前を変えた／消したため、${lost.length}項目が「全部の棟（共通）」になります。よろしいですか？`))return;
+  for(const it of lost)it.wing='';
   for(const it of S.items.filter(x=>!keep.has(x.typeId)))for(const p of it.photos)await delPhoto(p);
   S.items=S.items.filter(x=>keep.has(x.typeId));
   S.types=T.types.map(t=>({...t,name:t.name.trim()||'名称未設定'}));
@@ -582,7 +610,7 @@ $('#copyDo').onclick=async()=>{
   if(!src.length){alert('コピー元に項目がありません');return;}
   for(const it of src){
     const photos=[];for(const p of it.photos){const id=await copyPhoto(p);if(id)photos.push(id);}
-    S.items.push({...it,id:uid(),typeId:cur,order:++base,photos});
+    S.items.push({...it,id:uid(),typeId:cur,order:++base,photos,wing:wingsOf(cur).includes(it.wing)?it.wing:""});
   }
   await save();$('#copyOv').classList.remove('show');render();toast(`${src.length}項目をコピーしました`);
 };
