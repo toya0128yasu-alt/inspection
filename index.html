@@ -185,7 +185,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05c</p>
+  <p class="hint">アプリのバージョン：2026-11-05d</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
   <input type="file" id="mergeIn" accept=".json,application/json" hidden>
@@ -266,6 +266,7 @@ const ADDED_TYPES=[
 ];
 // 棟（サウス・ノース・C棟）の初期設定
 const DEF_WINGS={'ツイン':['サウス','ノース','C棟'],'トリプル':['サウス','ノース']};
+const DEF_WINGS2={'ログハウス':['11','12','13','15','16','17'],'コテージ':['7','8','10']};
 function addKids(){
   S.added=S.added||(S.kids?['kids']:[]);let ch=false;
   for(const a of ADDED_TYPES){
@@ -277,6 +278,7 @@ function addKids(){
     S.added.push(a.key);ch=true;
   }
   if(!S.added.includes('wings')){for(const t of S.types)if(DEF_WINGS[t.name]&&!(t.wings&&t.wings.length))t.wings=[...DEF_WINGS[t.name]];S.added.push('wings');ch=true;}
+  if(!S.added.includes('wings2')){for(const t of S.types)if(DEF_WINGS2[t.name]&&!(t.wings&&t.wings.length))t.wings=[...DEF_WINGS2[t.name]];S.added.push('wings2');ch=true;}
   delete S.kids;return ch;
 }
 const itemsOf=tid=>S.items.filter(i=>i.typeId===tid).sort((a,b)=>a.order-b.order);
