@@ -239,14 +239,31 @@ async function dbClear(s){if(mem){mem[s].clear();return;}const t=db.transaction(
 
 /* ---------- 状態 ---------- */
 const DEFAULT={
-  types:['ツイン','トリプル','和室','ジュニアスイート','ウェルネス','サウスVIP'].map((n,i)=>({id:'t'+i,name:n})).concat([{id:'tkids',name:'キッズフレンドリー'}]),kids:1,
+  types:['ツイン','トリプル','和室','ジュニアスイート','ウェルネス','サウスVIP'].map((n,i)=>({id:'t'+i,name:n})),
   areas:['入口','クローゼット','リビング','洗面','トイレ','その他'],
   items:[]
 };
 let S, cur;
 const save=()=>dbPut('kv','data',S);
-// 既存データにキッズフレンドリーを追加（一度だけ。あとで削除した場合は戻さない）
-function addKids(){if(S.kids)return false;if(!S.types.some(t=>t.name.includes('キッズ')))S.types.push({id:'tkids',name:'キッズフレンドリー'});S.kids=1;return true;}
+// 後から増えた部屋タイプを既存データにも追加（各1回だけ。あとで削除した場合は戻さない）
+const ADDED_TYPES=[
+  {key:'kids',id:'tkids',name:'キッズフレンドリー',match:'キッズ'},
+  {key:'jsdx',id:'tjsdx',name:'ジュニアスイート デラックス',match:'デラックス',after:'ジュニアスイート'},
+  {key:'log',id:'tlog',name:'ログハウス',match:'ログハウス'},
+  {key:'cottage',id:'tcot',name:'コテージ',match:'コテージ'},
+];
+function addKids(){
+  S.added=S.added||(S.kids?['kids']:[]);let ch=false;
+  for(const a of ADDED_TYPES){
+    if(S.added.includes(a.key))continue;
+    if(!S.types.some(t=>t.name.includes(a.match))){
+      const t={id:a.id,name:a.name},i=a.after?S.types.findIndex(x=>x.name===a.after):-1;
+      if(i>=0)S.types.splice(i+1,0,t);else S.types.push(t);
+    }
+    S.added.push(a.key);ch=true;
+  }
+  delete S.kids;return ch;
+}
 const itemsOf=tid=>S.items.filter(i=>i.typeId===tid).sort((a,b)=>a.order-b.order);
 const renumber=tid=>itemsOf(tid).forEach((it,i)=>it.order=i+1);
 
