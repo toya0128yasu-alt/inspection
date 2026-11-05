@@ -188,7 +188,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05g</p>
+  <p class="hint">アプリのバージョン：2026-11-05h</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
   <input type="file" id="mergeIn" accept=".json,application/json" hidden>
@@ -254,7 +254,7 @@ async function dbClear(s){if(mem){mem[s].clear();return;}const t=db.transaction(
 /* ---------- 状態 ---------- */
 const DEFAULT={
   types:['ツイン','トリプル','和室','ジュニアスイート','ウェルネス','サウスVIP'].map((n,i)=>({id:'t'+i,name:n})),
-  areas:['クローゼット','リビング','洗面','トイレ','その他','入口'],
+  areas:['クローゼット','リビング','セーフティボックス','冷蔵庫','洗面','トイレ','その他','入口'],
   items:[]
 };
 let S, cur;
@@ -692,20 +692,20 @@ $('#mergeIn').onchange=async e=>{
 const TEMPLATE=[
  ['クローゼット','ハンガー','本','規定本数・向きを揃える'],
  ['クローゼット','スリッパ','足','定員分を揃えて配置'],
- ['クローゼット','セーフティボックス','','扉は開いた状態・中に忘れ物なし'],
  ['クローゼット','棚・床','','ほこり・ゴミなし'],
  ['リビング','ベッドメイク','台','シワ・たるみなし、規定の仕上げ（和室は布団）'],
  ['リビング','ベッド下・ベッドサイド','','ゴミ・忘れ物なし'],
  ['リビング','キャビネット・ナイトテーブル','','拭き上げ・引き出しの中に忘れ物なし'],
  ['リビング','館内着','枚','定員分・サイズ確認・たたみ方が規定どおり'],
  ['リビング','テーブル・デスク・椅子','','拭き跡・指紋なし、規定の配置'],
- ['リビング','冷蔵庫','','中が空・電源ON・におい／汚れなし'],
  ['リビング','電気ケトル・グラス・茶器','個','定員分・汚れなし・水滴なし'],
  ['リビング','テレビ・リモコン','','電源OFF・リモコン定位置'],
  ['リビング','エアコン・暖房・リモコン','','設定温度・リモコン定位置'],
  ['リビング','窓・カーテン','','規定の開き具合、窓・サッシに汚れなし'],
  ['リビング','ゴミ箱','','空・袋セット済み'],
  ['リビング','館内案内・備品類','','規定の位置・破れ汚れなし'],
+ ['セーフティボックス','セーフティボックス','','扉は開いた状態・中に忘れ物なし・暗証番号リセット\n場所：ナイトテーブル下 または ミニバー下（部屋により異なる）'],
+ ['冷蔵庫','冷蔵庫','','中が空・電源ON・におい／汚れなし\n場所：ミニバー下 または ライティングデスクのTV下（部屋により異なる）'],
  ['洗面','鏡','','水跡・指紋・くもりなし'],
  ['洗面','洗面ボウル・排水口','','髪の毛・水垢なし'],
  ['洗面','アメニティ','セット','定員分・規定の配置'],
@@ -724,9 +724,10 @@ const TEMPLATE=[
  ['入口','入口ドア・ロック・ドアガード','','作動確認（退室時に最終確認）'],
 ];
 function addTemplateTo(tid){
-  let base=itemsOf(tid).length;
+  let base=itemsOf(tid).length,prevA=null;
   for(const [area,text,unit,note] of TEMPLATE){
-    if(!S.areas.includes(area))S.areas.push(area);
+    if(!S.areas.includes(area)){const i=prevA?S.areas.indexOf(prevA):-1;if(i>=0)S.areas.splice(i+1,0,area);else S.areas.push(area);}
+    prevA=area;
     S.items.push({id:uid(),typeId:tid,order:++base,area,text,sets:'',unit,note,wing:'',photos:[]});
   }
   return TEMPLATE.length;
