@@ -188,7 +188,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05o</p>
+  <p class="hint">アプリのバージョン：2026-11-05p</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
   <input type="file" id="mergeIn" accept=".json,application/json" hidden>
@@ -754,7 +754,10 @@ const TEMPLATE_JS=[
  ['洗面','クローゼット（洗面）：棚・中の備品','','ほこり・忘れ物なし、備品の数・配置'],
  ...TEMPLATE.filter(r=>['洗面','トイレ','その他','入口'].includes(r[0])),
 ];
-const tplFor=tid=>{const t=S.types.find(x=>x.id===tid);return t&&t.name==='ジュニアスイート'?TEMPLATE_JS:TEMPLATE;};
+// キッズフレンドリー：リビングにキッズセット
+const KIDS_SET=['リビング','キッズセット','セット','・トレー\n・塗り絵\n・色鉛筆\n・むささびくん'];
+const TEMPLATE_KIDS=(()=>{const t=[...TEMPLATE],i=t.map(r=>r[0]).lastIndexOf('リビング');t.splice(i+1,0,KIDS_SET);return t;})();
+const tplFor=tid=>{const t=S.types.find(x=>x.id===tid);if(!t)return TEMPLATE;if(t.name==='ジュニアスイート')return TEMPLATE_JS;if(t.name.includes('キッズ'))return TEMPLATE_KIDS;return TEMPLATE;};
 function addTemplateTo(tid){
   let base=itemsOf(tid).length,prevA=null;
   const TPL=tplFor(tid);
