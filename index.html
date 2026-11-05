@@ -179,13 +179,15 @@ textarea.in{min-height:70px;resize:vertical}
   <div class="cap">編集</div>
   <button data-act="types">🏷 部屋タイプ・エリアの名前を編集</button>
   <button data-act="copy">📋 他の部屋タイプから項目をコピー</button>
+  <button data-act="tpl">📝 基本チェックリストを追加（この部屋タイプの末尾に）</button>
+  <button data-act="tplAll">📝 基本チェックリストを全部屋タイプに入れる（項目が空のタイプだけ）</button>
   <div class="cap">データ（この端末の中だけに保存されています）</div>
   <button data-act="backup">💾 バックアップ／共有ファイルを書き出す</button>
   <button data-act="merge">🤝 相手のファイルと合体読み込み</button>
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05e</p>
+  <p class="hint">アプリのバージョン：2026-11-05f</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
   <input type="file" id="mergeIn" accept=".json,application/json" hidden>
@@ -327,7 +329,7 @@ async function render(){
   renderTabs();
   const all=itemsOf(cur), list=all.filter(visible), el=$('#list'), ws=wingsOf(cur), w=wingNow();
   const bar=ws.length?`<div class="wings"><span>棟</span><button data-wing="" class="${w?'':'on'}">すべて</button>${ws.map(x=>`<button data-wing="${esc(x)}" class="${x===w?'on':''}">${esc(x)}</button>`).join('')}</div>`:'';
-  if(!list.length){el.innerHTML=bar+`<div class="empty">まだ項目がありません。<br>「＋ 項目を追加」から、<br>回る順番どおりに追加していきましょう。</div>`;return;}
+  if(!list.length){el.innerHTML=bar+`<div class="empty">まだ項目がありません。<br>「＋ 項目を追加」から回る順番どおりに追加するか、<br>基本チェックリストを入れてから直していきましょう。${all.length?'':`<br><br><button class="btn pri" data-tpl="1">基本チェックリストを入れる（${TEMPLATE.length}項目）</button>`}</div>`;return;}
   let html=bar,prev=null;
   list.forEach((it,i)=>{
     if(it.area!==prev){html+=`<div class="sec">${esc(it.area||'エリア未設定')}</div>`;prev=it.area;}
@@ -361,6 +363,7 @@ $('#list').onclick=async e=>{
     [list[i].order,list[j].order]=[list[j].order,list[i].order];
     await save();render();return;
   }
+  if(e.target.closest('[data-tpl]')){await loadTemplate();return;}
   const ed=e.target.closest('[data-edit]'); if(ed)openEdit(ed.dataset.edit);
 };
 /* 写真ビューア：横スワイプで次の写真 */
@@ -479,6 +482,8 @@ $('#menuOv').onclick=async e=>{
   if(a==='printAll')doPrint(S.types.map(t=>t.id));
   if(a==='types')openTypes();
   if(a==='copy')openCopy();
+  if(a==='tpl'&&confirm(`基本チェックリスト（${TEMPLATE.length}項目）を、「${S.types.find(t=>t.id===cur).name}」の末尾に追加しますか？`))loadTemplate();
+  if(a==='tplAll')loadTemplateAll();
   if(a==='backup')backup();
   if(a==='restore')$('#restoreIn').click();
   if(a==='merge')$('#mergeIn').click();
@@ -679,6 +684,58 @@ $('#mergeIn').onchange=async e=>{
     alert(`合体しました。\n追加：${r.add}項目　更新：${r.upd}項目　削除：${r.del}項目${r.cfg?'\n部屋タイプ・エリアなどの設定も相手の新しい内容にそろえました。':''}`);
   }catch(err){alert('合体できませんでした：'+err.message);}
 };
+
+/* ---------- 基本チェックリスト（見本） ---------- */
+// [エリア, 確認項目, 単位, 備考]
+const TEMPLATE=[
+ ['入口','入口ドア・ロック・ドアガード','','作動確認'],
+ ['入口','照明スイッチ・カードキー差込口','','全灯点灯・球切れなし'],
+ ['入口','入口床・巾木','','髪の毛・砂・ほこりなし'],
+ ['入口','スリッパ','足','定員分を揃えて配置'],
+ ['クローゼット','ハンガー','本','規定本数・向きを揃える'],
+ ['クローゼット','浴衣・パジャマ','枚','定員分・サイズ確認・たたみ方が規定どおり'],
+ ['クローゼット','セーフティボックス','','扉は開いた状態・中に忘れ物なし'],
+ ['クローゼット','棚・床','','ほこり・ゴミなし'],
+ ['リビング','ベッドメイク','台','シワ・たるみなし、規定の仕上げ（和室は布団）'],
+ ['リビング','ベッド下・ベッドサイド','','ゴミ・忘れ物なし'],
+ ['リビング','テーブル・デスク・椅子','','拭き跡・指紋なし、規定の配置'],
+ ['リビング','冷蔵庫','','中が空・電源ON・におい／汚れなし'],
+ ['リビング','電気ケトル・グラス・茶器','個','定員分・汚れなし・水滴なし'],
+ ['リビング','テレビ・リモコン','','電源OFF・リモコン定位置'],
+ ['リビング','エアコン・暖房・リモコン','','設定温度・リモコン定位置'],
+ ['リビング','窓・カーテン','','規定の開き具合、窓・サッシに汚れなし'],
+ ['リビング','ゴミ箱','','空・袋セット済み'],
+ ['リビング','館内案内・備品類','','規定の位置・破れ汚れなし'],
+ ['洗面','鏡','','水跡・指紋・くもりなし'],
+ ['洗面','洗面ボウル・排水口','','髪の毛・水垢なし'],
+ ['洗面','アメニティ','セット','定員分・規定の配置'],
+ ['洗面','タオル類（バス・フェイス・ハンド）','枚','定員分・汚れなし'],
+ ['洗面','ドライヤー','','動作確認・コードをまとめる'],
+ ['洗面','浴槽・シャワー・排水口','','髪の毛・水垢・カビなし'],
+ ['洗面','バスマット','枚','セット済み'],
+ ['トイレ','便器内・便座裏','','汚れ・水垢なし'],
+ ['トイレ','トイレットペーパー','','三角折り・予備ロールあり'],
+ ['トイレ','床・便器周り','','髪の毛・汚れなし'],
+ ['その他','室内の臭い','','タバコ臭・こもった臭いなし'],
+ ['その他','照明・空調の最終状態','','規定の状態に戻す'],
+ ['その他','忘れ物の最終確認','','引き出し・棚・ベッド周りまで確認'],
+];
+function addTemplateTo(tid){
+  let base=itemsOf(tid).length;
+  for(const [area,text,unit,note] of TEMPLATE){
+    if(!S.areas.includes(area))S.areas.push(area);
+    S.items.push({id:uid(),typeId:tid,order:++base,area,text,sets:'',unit,note,wing:'',photos:[]});
+  }
+  return TEMPLATE.length;
+}
+async function loadTemplate(){const n=addTemplateTo(cur);await save();render();toast(`基本チェックリスト${n}項目を入れました`);}
+async function loadTemplateAll(){
+  const empty=S.types.filter(t=>!itemsOf(t.id).length);
+  if(!empty.length){alert('項目が空の部屋タイプはありません');return;}
+  if(!confirm(`基本チェックリストを次の部屋タイプに入れます：\n${empty.map(t=>t.name).join('、')}`))return;
+  for(const t of empty)addTemplateTo(t.id);
+  await save();render();toast(`${empty.length}タイプに入れました`);
+}
 
 /* ---------- 起動 ---------- */
 (async()=>{
