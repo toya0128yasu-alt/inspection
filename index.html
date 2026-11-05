@@ -180,6 +180,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="types">🏷 部屋タイプ・エリアの名前を編集</button>
   <button data-act="copy">📋 他の部屋タイプから項目をコピー</button>
   <button data-act="tpl">📝 基本チェックリストを追加（この部屋タイプの末尾に）</button>
+  <button data-act="clear" style="color:#C0392B">🗑 この部屋タイプの項目をすべて削除</button>
   <button data-act="tplAll">📝 基本チェックリストを全部屋タイプに入れる（項目が空のタイプだけ）</button>
   <div class="cap">データ（この端末の中だけに保存されています）</div>
   <button data-act="backup">💾 バックアップ／共有ファイルを書き出す</button>
@@ -187,7 +188,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05f</p>
+  <p class="hint">アプリのバージョン：2026-11-05g</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
   <input type="file" id="mergeIn" accept=".json,application/json" hidden>
@@ -253,7 +254,7 @@ async function dbClear(s){if(mem){mem[s].clear();return;}const t=db.transaction(
 /* ---------- 状態 ---------- */
 const DEFAULT={
   types:['ツイン','トリプル','和室','ジュニアスイート','ウェルネス','サウスVIP'].map((n,i)=>({id:'t'+i,name:n})),
-  areas:['入口','クローゼット','リビング','洗面','トイレ','その他'],
+  areas:['クローゼット','リビング','洗面','トイレ','その他','入口'],
   items:[]
 };
 let S, cur;
@@ -484,6 +485,7 @@ $('#menuOv').onclick=async e=>{
   if(a==='copy')openCopy();
   if(a==='tpl'&&confirm(`基本チェックリスト（${TEMPLATE.length}項目）を、「${S.types.find(t=>t.id===cur).name}」の末尾に追加しますか？`))loadTemplate();
   if(a==='tplAll')loadTemplateAll();
+  if(a==='clear')clearType();
   if(a==='backup')backup();
   if(a==='restore')$('#restoreIn').click();
   if(a==='merge')$('#mergeIn').click();
@@ -688,16 +690,14 @@ $('#mergeIn').onchange=async e=>{
 /* ---------- 基本チェックリスト（見本） ---------- */
 // [エリア, 確認項目, 単位, 備考]
 const TEMPLATE=[
- ['入口','入口ドア・ロック・ドアガード','','作動確認'],
- ['入口','照明スイッチ・カードキー差込口','','全灯点灯・球切れなし'],
- ['入口','入口床・巾木','','髪の毛・砂・ほこりなし'],
- ['入口','スリッパ','足','定員分を揃えて配置'],
  ['クローゼット','ハンガー','本','規定本数・向きを揃える'],
- ['クローゼット','浴衣・パジャマ','枚','定員分・サイズ確認・たたみ方が規定どおり'],
+ ['クローゼット','スリッパ','足','定員分を揃えて配置'],
  ['クローゼット','セーフティボックス','','扉は開いた状態・中に忘れ物なし'],
  ['クローゼット','棚・床','','ほこり・ゴミなし'],
  ['リビング','ベッドメイク','台','シワ・たるみなし、規定の仕上げ（和室は布団）'],
  ['リビング','ベッド下・ベッドサイド','','ゴミ・忘れ物なし'],
+ ['リビング','キャビネット・ナイトテーブル','','拭き上げ・引き出しの中に忘れ物なし'],
+ ['リビング','館内着','枚','定員分・サイズ確認・たたみ方が規定どおり'],
  ['リビング','テーブル・デスク・椅子','','拭き跡・指紋なし、規定の配置'],
  ['リビング','冷蔵庫','','中が空・電源ON・におい／汚れなし'],
  ['リビング','電気ケトル・グラス・茶器','個','定員分・汚れなし・水滴なし'],
@@ -719,6 +719,9 @@ const TEMPLATE=[
  ['その他','室内の臭い','','タバコ臭・こもった臭いなし'],
  ['その他','照明・空調の最終状態','','規定の状態に戻す'],
  ['その他','忘れ物の最終確認','','引き出し・棚・ベッド周りまで確認'],
+ ['入口','入口床・巾木','','髪の毛・砂・ほこりなし'],
+ ['入口','照明スイッチ・カードキー差込口','','全灯点灯・球切れなし'],
+ ['入口','入口ドア・ロック・ドアガード','','作動確認（退室時に最終確認）'],
 ];
 function addTemplateTo(tid){
   let base=itemsOf(tid).length;
@@ -729,6 +732,13 @@ function addTemplateTo(tid){
   return TEMPLATE.length;
 }
 async function loadTemplate(){const n=addTemplateTo(cur);await save();render();toast(`基本チェックリスト${n}項目を入れました`);}
+async function clearType(){
+  const list=itemsOf(cur),name=S.types.find(t=>t.id===cur).name;if(!list.length){alert('項目がありません');return;}
+  if(!confirm(`「${name}」の${list.length}項目をすべて削除します。よろしいですか？`))return;
+  if(!confirm('元に戻せません。本当に削除しますか？'))return;
+  for(const it of list)for(const ph of it.photos)await delPhoto(ph);
+  S.items=S.items.filter(x=>x.typeId!==cur);await save();render();toast('削除しました');
+}
 async function loadTemplateAll(){
   const empty=S.types.filter(t=>!itemsOf(t.id).length);
   if(!empty.length){alert('項目が空の部屋タイプはありません');return;}
