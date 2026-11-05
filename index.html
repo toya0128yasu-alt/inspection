@@ -188,7 +188,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05q</p>
+  <p class="hint">アプリのバージョン：2026-11-05r</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
   <input type="file" id="mergeIn" accept=".json,application/json" hidden>
@@ -266,7 +266,6 @@ const ADDED_TYPES=[
   {key:'wps',id:'twps',name:'ウェルネス プレミアムスイート',match:'プレミアム',after:'ウェルネス'},
   {key:'log',id:'tlog',name:'ログハウス',match:'ログハウス'},
   {key:'cottage',id:'tcot',name:'コテージ',match:'コテージ'},
-  {key:'minibar',id:'tmini',name:'ミニバー',match:'ミニバー'},
 ];
 // 棟（サウス・ノース・C棟）の初期設定
 const DEF_WINGS={'ツイン':['サウス','ノース','C棟'],'トリプル':['サウス','ノース']};
@@ -282,6 +281,13 @@ function addKids(){
     S.added.push(a.key);ch=true;
   }
   if(!S.added.includes('wings')){for(const t of S.types)if(DEF_WINGS[t.name]&&!(t.wings&&t.wings.length))t.wings=[...DEF_WINGS[t.name]];S.added.push('wings');ch=true;}
+  // ミニバーは部屋タイプではなくエリア：タブを外し（項目が無い場合）、エリアの先頭に入れる
+  if(!S.added.includes('mbarea')){
+    const t=S.types.find(x=>x.id==='tmini'||x.name==='ミニバー');
+    if(t&&!S.items.some(i=>i.typeId===t.id)&&S.types.length>1)S.types=S.types.filter(x=>x!==t);
+    if(!S.areas.includes('ミニバー'))S.areas.unshift('ミニバー');
+    S.added.push('mbarea');ch=true;
+  }
   if(!S.added.includes('wings2')){for(const t of S.types)if(DEF_WINGS2[t.name]&&!(t.wings&&t.wings.length))t.wings=[...DEF_WINGS2[t.name]];S.added.push('wings2');ch=true;}
   delete S.kids;return ch;
 }
