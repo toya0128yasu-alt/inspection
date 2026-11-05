@@ -188,7 +188,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-05p</p>
+  <p class="hint">アプリのバージョン：2026-11-05q</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" accept=".json,application/json" hidden>
   <input type="file" id="mergeIn" accept=".json,application/json" hidden>
@@ -756,7 +756,16 @@ const TEMPLATE_JS=[
 ];
 // キッズフレンドリー：リビングにキッズセット
 const KIDS_SET=['リビング','キッズセット','セット','・トレー\n・塗り絵\n・色鉛筆\n・むささびくん'];
-const TEMPLATE_KIDS=(()=>{const t=[...TEMPLATE],i=t.map(r=>r[0]).lastIndexOf('リビング');t.splice(i+1,0,KIDS_SET);return t;})();
+const KIDS_LIVING=[KIDS_SET,['リビング','オムツ箱','','規定の位置・中身の補充']];
+const KIDS_WASH=[
+ ['洗面','食器用洗剤','','残量・規定の位置'],
+ ['洗面','スポンジ','','新品・規定の位置'],
+ ['洗面','お子様コップ','個','汚れなし・規定の位置'],
+ ['洗面','ステップ','','汚れなし・ぐらつきなし'],
+ ['洗面','お子様便座','','汚れなし・規定の位置'],
+];
+const TEMPLATE_KIDS=(()=>{const t=[...TEMPLATE],last=a=>t.map(r=>r[0]).lastIndexOf(a);
+  t.splice(last('リビング')+1,0,...KIDS_LIVING);t.splice(last('洗面')+1,0,...KIDS_WASH);return t;})();
 const tplFor=tid=>{const t=S.types.find(x=>x.id===tid);if(!t)return TEMPLATE;if(t.name==='ジュニアスイート')return TEMPLATE_JS;if(t.name.includes('キッズ'))return TEMPLATE_KIDS;return TEMPLATE;};
 function addTemplateTo(tid){
   let base=itemsOf(tid).length,prevA=null;
