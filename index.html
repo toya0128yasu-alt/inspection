@@ -191,11 +191,12 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="tplAll">📝 基本チェックリストを全部屋タイプに入れる（項目が空のタイプだけ）</button>
   <div class="cap">データ（この端末の中だけに保存されています）</div>
   <button data-act="backup">💾 バックアップ／共有ファイルを書き出す</button>
+  <button data-act="slim">🗜 この端末の写真を軽くする</button>
   <button data-act="merge">🤝 相手のファイルと合体読み込み</button>
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-11b</p>
+  <p class="hint">アプリのバージョン：2026-11-11c</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" hidden>
   <input type="file" id="mergeIn" hidden>
@@ -533,6 +534,7 @@ $('#menuOv').onclick=async e=>{
   if(a==='tplAll')loadTemplateAll();
   if(a==='clear')clearType();
   if(a==='backup')backup();
+  if(a==='slim')slimPhotos();
   if(a==='restore')$('#restoreIn').click();
   if(a==='merge')$('#mergeIn').click();
   if(a==='help')$('#helpOv').classList.add('show');
@@ -618,7 +620,22 @@ h1{font-size:20px;margin:0 0 4px;color:#1F4E78}.d{font-size:12px;color:#777;marg
 
 /* ---------- バックアップ ---------- */
 // バックアップ：同じ写真は1つにまとめ、大きすぎるときは写真を軽くして書き出す
-const SEND_LIMIT=30*1048576; // LINE・メールの上限（約34MB）より少し小さく
+// 端末に保存している写真を軽くする（長辺900px・画質62%）
+async function slimPhotos(){
+  const ids=new Set();for(const it of S.items)for(const ph of it.photos)ids.add(ph);
+  if(!ids.size){alert('写真がありません');return;}
+  if(!confirm(`この端末の写真${ids.size}枚を軽くします（長辺900px）。\n点検で見るには十分な画質ですが、元の画質には戻せません。よろしいですか？`))return;
+  let before=0,after=0,i=0;
+  for(const ph of ids){
+    i++;if(i%5===0)toast(`写真を軽くしています… ${i}/${ids.size}`);
+    const u=await photoURL(ph);if(!u)continue;before+=u.length;
+    let v=u;try{const img=await loadImg(u);if(Math.max(img.naturalWidth,img.naturalHeight)>900||u.length>200*1024){const w=shrink(img,900,0.62);if(w.length<u.length)v=w;}}catch(_){}
+    after+=v.length;if(v!==u){await dbPut('photos',ph,v);urls.delete(ph);}
+  }
+  const mb=x=>(x*0.75/1048576).toFixed(1);
+  alert(`軽くしました。\n写真の容量：約${mb(before)}MB → 約${mb(after)}MB`);render();
+}
+const SEND_LIMIT=15*1048576; // 送りやすいよう約15MBを目安に軽くする（LINE・メールの上限は約34MB）
 async function shrinkData(u,max,q){try{return shrink(await loadImg(u),max,q);}catch(_){return u;}}
 async function backup(){
   toast('書き出し中…');
