@@ -195,7 +195,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-06c</p>
+  <p class="hint">アプリのバージョン：2026-11-11</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" hidden>
   <input type="file" id="mergeIn" hidden>
@@ -304,6 +304,14 @@ function addKids(){
     if(t&&!S.items.some(i=>i.typeId===t.id)&&S.types.length>1)S.types=S.types.filter(x=>x!==t);
     if(!S.areas.includes('ミニバー'))S.areas.unshift('ミニバー');
     S.added.push('mbarea');ch=true;
+  }
+  // ジュニアスイートだけのエリア「寝室」（ほかの部屋タイプには出さない）
+  if(!S.added.includes('jsbed')){
+    S.typeAreas=S.typeAreas||{};
+    const js=S.types.find(t=>t.name==='ジュニアスイート');
+    if(js){const l=S.typeAreas[js.id]=S.typeAreas[js.id]||[];if(!l.includes('寝室'))l.push('寝室');}
+    if(S.areas.includes('寝室')&&!S.items.some(i=>i.area==='寝室'&&(!js||i.typeId!==js.id)))S.areas=S.areas.filter(a=>a!=='寝室');
+    S.added.push('jsbed');ch=true;
   }
   if(!S.added.includes('wings2')){for(const t of S.types)if(DEF_WINGS2[t.name]&&!(t.wings&&t.wings.length))t.wings=[...DEF_WINGS2[t.name]];S.added.push('wings2');ch=true;}
   delete S.kids;return ch;
@@ -417,7 +425,11 @@ $('#addBtn').onclick=()=>openEdit(null);
 
 /* ---------- 編集 ---------- */
 let E=null; // {id, area, photos:[], added:[], removed:[]}
-function areaChips(){ $('#fArea').innerHTML=S.areas.map(a=>`<button type="button" class="${a===E.area?'on':''}">${esc(a)}</button>`).join(''); }
+function areasFor(tid){
+  const ex=((S.typeAreas||{})[tid]||[]).filter(a=>!S.areas.includes(a));if(!ex.length)return S.areas;
+  const l=[...S.areas],i=l.indexOf('リビング');l.splice(i>=0?i:l.length,0,...ex);return l;
+}
+function areaChips(){ $('#fArea').innerHTML=areasFor(cur).map(a=>`<button type="button" class="${a===E.area?'on':''}">${esc(a)}</button>`).join(''); }
 $('#fArea').onclick=e=>{const b=e.target.closest('button');if(!b)return;E.area=b.textContent;areaChips();};
 function wingChips(){const ws=wingsOf(cur);$('#fWingBox').style.display=ws.length?'':'none';
   $('#fWing').innerHTML=[['','全部の棟（共通）'],...ws.map(x=>[x,x+'のみ'])].map(([v,l])=>`<button type="button" data-w="${esc(v)}" class="${v===E.wing?'on':''}">${esc(l)}</button>`).join('');}
@@ -435,7 +447,7 @@ $('#fPhotos').onclick=e=>{
 function openEdit(id){
   const list=itemsOf(cur), shown=list.filter(visible), it=id?S.items.find(x=>x.id===id):null;
   const last=shown[shown.length-1];
-  E={id,wing:it?(it.wing||''):'',area:it?it.area:(last?last.area:S.areas[0]),photos:it?[...it.photos]:[],added:[],removed:[]};
+  E={id,wing:it?(it.wing||''):'',area:it?it.area:(last?last.area:areasFor(cur)[0]),photos:it?[...it.photos]:[],added:[],removed:[]};
   $('#editTitle').textContent=it?'項目を編集':'項目を追加';
   $('#fOrder').value=it?(shown.indexOf(it)+1||list.indexOf(it)+1):shown.length+1;
   $('#fText').value=it?it.text:'';
@@ -830,7 +842,7 @@ function addTemplateTo(tid){
   let base=itemsOf(tid).length,prevA=null;
   const TPL=tplFor(tid);
   for(const [area,text,unit,note] of TPL){
-    if(!S.areas.includes(area)){const i=prevA?S.areas.indexOf(prevA):-1;if(i>=0)S.areas.splice(i+1,0,area);else if(!prevA)S.areas.unshift(area);else S.areas.push(area);}
+    if(!areasFor(tid).includes(area)){const i=prevA?S.areas.indexOf(prevA):-1;if(i>=0)S.areas.splice(i+1,0,area);else if(!prevA)S.areas.unshift(area);else S.areas.push(area);}
     prevA=area;
     S.items.push({id:uid(),typeId:tid,order:++base,area,text,sets:'',unit,note,wing:'',photos:[]});
   }
