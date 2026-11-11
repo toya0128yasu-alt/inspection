@@ -195,7 +195,7 @@ textarea.in{min-height:70px;resize:vertical}
   <button data-act="restore">📂 バックアップから読み込む（今のデータと置き換え）</button>
   <button data-act="help">❓ 使い方</button>
   <p class="hint" id="usage"></p>
-  <p class="hint">アプリのバージョン：2026-11-11</p>
+  <p class="hint">アプリのバージョン：2026-11-11b</p>
   <div class="foot"><span class="grow"></span><button class="btn" data-act="close">閉じる</button></div>
   <input type="file" id="restoreIn" hidden>
   <input type="file" id="mergeIn" hidden>
@@ -312,6 +312,13 @@ function addKids(){
     if(js){const l=S.typeAreas[js.id]=S.typeAreas[js.id]||[];if(!l.includes('寝室'))l.push('寝室');}
     if(S.areas.includes('寝室')&&!S.items.some(i=>i.area==='寝室'&&(!js||i.typeId!==js.id)))S.areas=S.areas.filter(a=>a!=='寝室');
     S.added.push('jsbed');ch=true;
+  }
+  // ジュニアスイート デラックスにもエリア「寝室」
+  if(!S.added.includes('jsdxbed')){
+    S.typeAreas=S.typeAreas||{};
+    const dx=S.types.find(t=>t.id==='tjsdx'||t.name==='ジュニアスイート デラックス');
+    if(dx){const l=S.typeAreas[dx.id]=S.typeAreas[dx.id]||[];if(!l.includes('寝室'))l.push('寝室');}
+    S.added.push('jsdxbed');ch=true;
   }
   if(!S.added.includes('wings2')){for(const t of S.types)if(DEF_WINGS2[t.name]&&!(t.wings&&t.wings.length))t.wings=[...DEF_WINGS2[t.name]];S.added.push('wings2');ch=true;}
   delete S.kids;return ch;
