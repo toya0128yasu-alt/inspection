@@ -932,17 +932,17 @@ const KIDS_WASH=[
 ];
 const TEMPLATE_KIDS=(()=>{const t=[...TEMPLATE],last=a=>t.map(r=>r[0]).lastIndexOf(a);
   t.splice(last('リビング')+1,0,...KIDS_LIVING);t.splice(last('洗面')+1,0,...KIDS_WASH);return t;})();
-// ウェルネス プレミアムスイート：リビングにBGM機器、もう1つのリビング（リビング2）にサウナ・焚き火・五右衛門風呂・ソファー
-const WPS_LIVING2=[
+// ウェルネス：リビングにBGM機器、もう1つのリビング（リビング2）にサウナ・焚き火・五右衛門風呂・ソファー
+const WELL_LIVING2=[
  ['リビング2','サウナ','','ベンチ・床の拭き上げ、ストーブの電源・温度設定、備品の補充'],
  ['リビング2','焚き火','','灰・燃えかすの処理、薪・着火材の補充、周りの汚れなし'],
  ['リビング2','五右衛門風呂','','湯船・排水口の汚れ・水垢なし、蓋・底板の確認'],
  ['リビング2','ソファー','','隙間に忘れ物なし、汚れなし、規定の配置'],
 ];
-const TEMPLATE_WPS=(()=>{const t=[...TEMPLATE],last=a=>t.map(r=>r[0]).lastIndexOf(a);
-  t.splice(last('リビング')+1,0,['リビング','BGM機器','','電源・音量・選曲が規定どおり、リモコン定位置'],...WPS_LIVING2);return t;})();
+const TEMPLATE_WELL=(()=>{const t=[...TEMPLATE],last=a=>t.map(r=>r[0]).lastIndexOf(a);
+  t.splice(last('リビング')+1,0,['リビング','BGM機器','','電源・音量・選曲が規定どおり、リモコン定位置'],...WELL_LIVING2);return t;})();
 const tplFor=tid=>{const t=S.types.find(x=>x.id===tid);if(!t)return TEMPLATE;if(t.name==='ジュニアスイート')return TEMPLATE_JS;if(t.name.includes('キッズ'))return TEMPLATE_KIDS;
-  if(t.name.includes('ウェルネス')&&t.name.includes('スイート'))return TEMPLATE_WPS;return TEMPLATE;};
+  if(t.name==='ウェルネス')return TEMPLATE_WELL;return TEMPLATE;};
 function addTemplateTo(tid){
   let base=itemsOf(tid).length,prevA=null;
   const TPL=tplFor(tid);
